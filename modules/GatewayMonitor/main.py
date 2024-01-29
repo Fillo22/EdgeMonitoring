@@ -1,25 +1,24 @@
-# Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for
-# full license information.
-
 import asyncio
 import sys
 import signal
 import threading
 from azure.iot.device import IoTHubModuleClient
+import os
+from services.checks import ConnectivityChecker
+from services.storage import AzureStorageService
+import json
 
 
 # Event indicating client stop
 stop_event = threading.Event()
+storage_service = AzureStorageService(os.environ.get("AZURE_STORAGE_CONNECTION_STRING"))
+
 
 
 def create_client():
     client = IoTHubModuleClient.create_from_edge_environment()
 
-    # Define function for handling received messages
     async def receive_message_handler(message):
-        # NOTE: This function only handles messages sent to "input1".
-        # Messages sent to other inputs, or to the default, will be discarded
         if message.input_name == "monitoring":
             print("the data in the message received on input1 was ")
             print(message.data)
@@ -29,10 +28,8 @@ def create_client():
             await client.send_message_to_output(message, "monitored")
 
     try:
-        # Set handler on the client
         client.on_message_received = receive_message_handler
     except:
-        # Cleanup if failure occurs
         client.shutdown()
         raise
 
@@ -40,9 +37,24 @@ def create_client():
 
 
 async def run_sample(client):
-    # Customize this coroutine to do whatever tasks the module initiates
-    # e.g. sending messages
     while True:
+        tasks_json = os.environ.get("TASKS_JSON")
+        if not tasks_json:
+            raise Exception("TASKS_JSON environment variable not found")
+
+        tasks = json.loads(tasks_json)
+        checker = ConnectivityChecker(tasks)
+        checker.check_connectivity()
+        df = checker.to_polars_df()
+
+        connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        container_name = os.environ.get("AZURE_STORAGE_CONTAINER_NAME")
+        blob_name = "connectivity_results.csv"
+
+        if not all([connection_string, container_name]):
+            raise Exception("Azure storage connection information not found in environment variables")
+
+        storage_service.save_to_blob(df,blob_name,container_name)
         await asyncio.sleep(1000)
 
 
