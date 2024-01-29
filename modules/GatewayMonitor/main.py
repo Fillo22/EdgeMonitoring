@@ -6,7 +6,7 @@ import asyncio
 import sys
 import signal
 import threading
-from azure.iot.device.aio import IoTHubModuleClient
+from azure.iot.device import IoTHubModuleClient
 
 
 # Event indicating client stop
@@ -20,13 +20,13 @@ def create_client():
     async def receive_message_handler(message):
         # NOTE: This function only handles messages sent to "input1".
         # Messages sent to other inputs, or to the default, will be discarded
-        if message.input_name == "input1":
+        if message.input_name == "monitoring":
             print("the data in the message received on input1 was ")
             print(message.data)
             print("custom properties are")
             print(message.custom_properties)
             print("forwarding mesage to output1")
-            await client.send_message_to_output(message, "output1")
+            await client.send_message_to_output(message, "monitored")
 
     try:
         # Set handler on the client
