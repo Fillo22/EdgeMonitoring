@@ -43,6 +43,7 @@ Set the following environment variables in your IoT Edge module settings:
 
 - `AZURE_STORAGE_CONNECTION_STRING`: Your Azure Blob Storage account connection string.
 - `AZURE_STORAGE_CONTAINER_NAME`: The name of the container in Azure Blob Storage where the CSV results will be saved.
+- `SLEEP_TIME`: The amount of time between scanning
 
 ## Usage
 
